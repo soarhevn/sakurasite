@@ -18,7 +18,7 @@ services:
         condition: on-failure
     environment:
       - ENABLE_IPV6=true
-      - DEFAULT_HOST=yourhost.com
+      - DEFAULT_HOST=sakuratechnology.com
       - HTTPS_METHOD=redirect
     labels:
       - 'com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true'
@@ -78,10 +78,10 @@ services:
       - nginx-proxy
     image: nginx:alpine
     environment:
-      - VIRTUAL_HOST=yourhost.com, www.yourhost.com
+      - VIRTUAL_HOST=sakuratechnology.com, www.sakuratechnology.com
       # - LETSENCRYPT_TEST=true
-      - LETSENCRYPT_HOST=yourhost.com, www.yourhost.com,
-      - LETSENCRYPT_EMAIL=you@yourhost.com
+      - LETSENCRYPT_HOST=sakuratechnology.com, www.sakuratechnology.com
+      - LETSENCRYPT_EMAIL=webmaster@sakuratechnology.com
     deploy:
       replicas: 1
       restart_policy:
@@ -93,8 +93,8 @@ services:
         target: /etc/nginx/conf.d
       # Virtual Hosts
       - type: bind
-        source: yourhost.com
-        target: /usr/share/nginx/html/yourhost.com
+        source: sakuratechnology.com
+        target: /usr/share/nginx/html/sakuratechnology.com
     networks:
       - webnet
 
@@ -106,7 +106,7 @@ services:
         condition: on-failure
     environment:
       # added this so we can see all messages under one ID
-      - SYSLOG_HOSTNAME=youchoose
+      - SYSLOG_HOSTNAME=moose-docker
       - TAIL=250
     volumes:
       # - /etc/hostname:/etc/host_hostname:ro

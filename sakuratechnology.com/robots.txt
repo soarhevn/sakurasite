@@ -1,0 +1,4 @@
+ User-agent: *
+ Disallow: /bams/
+ Disallow: /kosah/
+ Sitemap: /sitemap.xml
