@@ -1,0 +1,119 @@
+version: "3.4"
+
+networks:
+  webnet:
+
+volumes:
+  # volumes for let's encrypt
+  certs:
+  nginx-vhost:
+  proxy-html:
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy:alpine
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    environment:
+      - ENABLE_IPV6=true
+      - DEFAULT_HOST=yourhost.com
+      - HTTPS_METHOD=redirect
+    labels:
+      - 'com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy=true'
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: host
+      - target: 443
+        published: 443
+        protocol: tcp
+        mode: host
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      # Let's Encrypt Volumes
+      - type: volume
+        source: certs
+        target: /etc/nginx/certs
+        read_only: true
+      - type: volume
+        source: nginx-vhost
+        target: /etc/nginx/vhost.d
+      - type: volume
+        source: proxy-html
+        target: /usr/share/nginx/html
+      # Test HTTPS certs
+      # - type: bind
+      #   source: certs
+      #   target: /etc/nginx/certs
+    networks:
+      - webnet
+  
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion:latest
+    depends_on:
+      - nginx-proxy
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - type: volume
+        source: certs
+        target: /etc/nginx/certs
+      - type: volume
+        source: nginx-vhost
+        target: /etc/nginx/vhost.d
+      - type: volume
+        source: proxy-html
+        target: /usr/share/nginx/html
+    networks:
+      - webnet
+
+  web:
+    depends_on:
+      - nginx-proxy
+    image: nginx:alpine
+    environment:
+      - VIRTUAL_HOST=yourhost.com, www.yourhost.com
+      # - LETSENCRYPT_TEST=true
+      - LETSENCRYPT_HOST=yourhost.com, www.yourhost.com,
+      - LETSENCRYPT_EMAIL=you@yourhost.com
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    volumes:
+      # Nginx Conf
+      - type: bind
+        source: conf
+        target: /etc/nginx/conf.d
+      # Virtual Hosts
+      - type: bind
+        source: yourhost.com
+        target: /usr/share/nginx/html/yourhost.com
+    networks:
+      - webnet
+
+  log:
+    image: gliderlabs/logspout:latest
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+    environment:
+      # added this so we can see all messages under one ID
+      - SYSLOG_HOSTNAME=youchoose
+      - TAIL=250
+    volumes:
+      # - /etc/hostname:/etc/host_hostname:ro
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
+    command:
+      syslog+tls://logs6.papertrailapp.com:34880
+    networks:
+      - webnet
